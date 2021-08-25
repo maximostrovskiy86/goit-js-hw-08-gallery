@@ -8,8 +8,10 @@ const refs = {
     backDrop: document.querySelector('.lightbox__overlay'),
 }
 
+let activeImage = 0;
+
 function makeImageGalleryMarkup(galleryItems) {
-    return galleryItems.map(({preview, original, description}) => {
+    return galleryItems.map(({preview, original, description}, index) => {
         return `
         <li class="gallery__item">
             <a class="gallery__link" href="${original}">
@@ -18,6 +20,7 @@ function makeImageGalleryMarkup(galleryItems) {
                     src="${preview}"
                     data-source="${original}"
                     alt="${description}"
+                    data-index="${index}"
                 />
             </a>
         </li>`;
@@ -29,24 +32,30 @@ refs.gallery.insertAdjacentHTML('afterbegin', galleryMarkup);
 
 
 const handleOpenModal = (event) => {
+    if (!event.target.classList.contains('gallery__image')) {
+        return;
+    }
     window.addEventListener('keydown', onEscKeyDown);
-    window.addEventListener('keydown', sliderKeydown);
+    window.addEventListener('keyup', sliderKeydown);
 
     event.preventDefault();
 
     const activeItem = event.target;
 
     refs.modalOpen.classList.add('is-open');
-    refs.lightbox.src = activeItem.dataset.source;
-    refs.lightbox.alt = activeItem.alt;
+    activeImage = +event.target.dataset.index;
+    updateImage(activeItem.dataset.source, activeItem.alt)
 }
 
 const handleCloseModal = () => {
     window.removeEventListener('keydown', onEscKeyDown);
-
-    refs.lightbox.src = '';
-    refs.lightbox.alt = '';
     refs.modalOpen.classList.remove('is-open');
+    updateImage();
+}
+
+function updateImage(src = '', alt = '') {
+    refs.lightbox.src = src;
+    refs.lightbox.alt = alt;
 }
 
 const onOverlayClose = (event) => {
@@ -61,24 +70,28 @@ const onEscKeyDown = (event) => {
     }
 }
 
-// слайдер в работе
-function sliderKeydown(event) {
-    const items = refs.gallery.querySelectorAll('.gallery__item');
-    const activeItem = event.target;
-    console.log(activeItem)
+const galleryItemLength = galleryItems.length - 1;
 
-    // const LEFT_KEY_CODE = 'ArrowLeft';
-    // const isLeft = event.code === LEFT_KEY_CODE;
-    // const RIGHT_KEY_CODE = 'ArrowRight';
-    // return items.forEach((item, index) => {
-    //     if (isLeft) {
-    //         console.log(item[index - 1])
-    //         return item[index - 1];
-    //         // console.log(activeItem.previousSibling)
-    //     }
-    // });
+function sliderKeydown(event) {
+    const LEFT_KEY_CODE = 'ArrowLeft';
+    const RIGHT_KEY_CODE = 'ArrowRight';
+    const isLeft = event.code === LEFT_KEY_CODE;
+    const isRight = event.code === RIGHT_KEY_CODE
+
+    if (isLeft) {
+        activeImage -= 1;
+        if (activeImage < 0) {
+            activeImage = galleryItemLength;
+        }
+    } else if (isRight) {
+        activeImage += 1;
+        if (activeImage > galleryItemLength) {
+            activeImage = 0;
+        }
+    }
+
+    refs.lightbox.src = galleryItems[activeImage].original;
 }
-// слайдер в работе
 
 refs.gallery.addEventListener('click', handleOpenModal);
 refs.modalClose.addEventListener('click', handleCloseModal);
